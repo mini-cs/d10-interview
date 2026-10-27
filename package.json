@@ -1,0 +1,8 @@
+{
+  "name": "d10-interview",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^2.31.0"
+  }
+}

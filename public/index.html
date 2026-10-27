@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 면접 코치</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main>
+    <h1>AI 면접 코치 <small>개발 직군 신입</small></h1>
+
+    <section id="start-screen">
+      <form id="start-form" novalidate>
+        <label>이름
+          <input name="name" autocomplete="off">
+        </label>
+        <fieldset>
+          <legend>트랙</legend>
+          <label><input type="radio" name="track" value="frontend"> 프론트엔드</label>
+          <label><input type="radio" name="track" value="backend"> 백엔드</label>
+          <label><input type="radio" name="track" value="fullstack"> 풀스택</label>
+        </fieldset>
+        <label>회사
+          <input name="company" value="클래스로" autocomplete="off">
+        </label>
+        <label>내 경험 <span class="hint">(30자 이상, 1000자 이내)</span>
+          <textarea name="experience" rows="6" placeholder="프로젝트, 써 본 기술, 맡은 역할을 적어 주세요."></textarea>
+        </label>
+        <p class="warn">실제 개인정보나 회사 기밀은 적지 마세요. (무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어요)</p>
+        <p class="notice" id="start-notice" role="alert"></p>
+        <button type="submit">면접 시작</button>
+      </form>
+    </section>
+
+    <section id="interview-screen" hidden>
+      <div class="status">
+        <span id="status-track"></span>
+        <span id="status-count"></span>
+        <progress id="status-progress" max="5" value="0"></progress>
+        <span>이해도 <strong id="status-understanding">-</strong></span>
+        <button type="button" id="restart">처음부터 다시</button>
+      </div>
+      <div id="chat" aria-live="polite"></div>
+      <p class="waiting" id="waiting" hidden></p>
+      <p class="notice" id="chat-notice" role="alert"></p>
+      <form id="answer-form" novalidate>
+        <label for="answer" class="sr-only">내 답변</label>
+        <textarea id="answer" name="answer" rows="4" placeholder="답변을 적어 주세요. (2000자 이내)"></textarea>
+        <button type="submit">답변 보내기</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

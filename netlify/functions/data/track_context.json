@@ -1,0 +1,184 @@
+{
+  "_설명": "AI 면접 코치가 질문을 만들 때 쓰는 재료. ncs 는 공개된 NCS 직무기술서에서 확인한 능력단위, posting 은 신입 · 인턴 · 신입 가능 공고 3~4개를 키워드로 요약한 것(회사 이름 제외). sources 는 프롬프트에 넣지 않고 확인용으로만 둔다. 공고는 2025~2026년 게시분이라 마감된 것이 섞여 있다.",
+  "common": {
+    "ncs": [
+      "요구사항 확인",
+      "프로그래밍 언어 활용",
+      "애플리케이션 테스트 수행",
+      "소프트웨어공학 활용"
+    ],
+    "필요지식": [
+      "SW 개발 방법론",
+      "디버깅 기법",
+      "회귀 테스트",
+      "형상관리(버전관리)"
+    ],
+    "필요기술": [
+      "IDE 도구 활용",
+      "프로그램 디버깅",
+      "형상관리 도구 활용",
+      "프로그래밍 코드 검토"
+    ],
+    "직무수행태도": [
+      "개발 표준 준수",
+      "팀원 간 협업",
+      "과제를 완수하는 책임감",
+      "소프트웨어 품질을 지키려는 태도"
+    ]
+  },
+  "tracks": {
+    "frontend": {
+      "이름": "프론트엔드",
+      "ncs": [
+        "화면 구현",
+        "UI 구현",
+        "UI 테스트",
+        "인터페이스 구현"
+      ],
+      "posting": {
+        "주요업무": [
+          "웹 UI 설계와 구현",
+          "반응형 웹 구현",
+          "백엔드 API 연동",
+          "브라우저 · 기기 호환성 테스트",
+          "사용자 행동 로그 설계 · 적용",
+          "성능 개선과 코드 품질 관리"
+        ],
+        "자격요건": [
+          "HTML · CSS · JS 이해",
+          "React 사용 경험",
+          "TypeScript 사용 경험",
+          "HTTP · REST 이해",
+          "브라우저 동작 원리 이해",
+          "Git 협업 경험"
+        ],
+        "우대사항": [
+          "SSR · Next.js 경험",
+          "웹 성능 최적화 경험",
+          "SEO 최적화 경험",
+          "테스트 환경 구축 경험",
+          "디자인 시스템 경험",
+          "디자인 툴 사용 경험"
+        ],
+        "기술스택": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Zustand · Redux",
+          "TanStack Query",
+          "Tailwind"
+        ]
+      }
+    },
+    "backend": {
+      "이름": "백엔드",
+      "ncs": [
+        "서버프로그램 구현",
+        "데이터 입출력 구현",
+        "인터페이스 구현",
+        "SQL 응용",
+        "소프트웨어 개발 보안 구축"
+      ],
+      "posting": {
+        "주요업무": [
+          "Spring Boot 서버 개발",
+          "백오피스 기능 개선",
+          "신규 서비스 API 개발",
+          "테스트 코드 작성",
+          "리팩토링으로 품질 관리",
+          "트래픽 증가 대응"
+        ],
+        "자격요건": [
+          "Java 웹 개발 경험",
+          "Spring Boot 사용 경험",
+          "RDBMS 활용 경험",
+          "데이터 모델링 · 쿼리 최적화",
+          "장애 트러블슈팅 경험"
+        ],
+        "우대사항": [
+          "Docker 사용 경험",
+          "모니터링 도구 경험",
+          "실사용자 서비스 운영 경험",
+          "협업 도구 사용 경험",
+          "대용량 트래픽 경험"
+        ],
+        "기술스택": [
+          "Java",
+          "Spring Boot",
+          "JPA",
+          "MySQL",
+          "Redis",
+          "Spring Batch"
+        ]
+      }
+    },
+    "fullstack": {
+      "이름": "풀스택",
+      "ncs": [
+        "통합 구현",
+        "화면 구현",
+        "서버프로그램 구현",
+        "인터페이스 구현",
+        "개발자 환경 구축"
+      ],
+      "posting": {
+        "주요업무": [
+          "웹 프론트 · 백엔드 개발",
+          "앱에서 쓰는 API 개발",
+          "관리자 대시보드 개발",
+          "요구사항 분석과 구현",
+          "DB · 아키텍처 설계 참여",
+          "피드백 반영과 버그 수정"
+        ],
+        "자격요건": [
+          "프론트 · 백엔드 모두 개발",
+          "React 프론트 개발 경험",
+          "Node.js 백엔드 경험",
+          "RDBMS 이해와 적용",
+          "Git 협업 능력",
+          "간단한 CI/CD 구축"
+        ],
+        "우대사항": [
+          "AI 활용 프로젝트 경험",
+          "Docker · Linux 경험",
+          "팀 협업 경험",
+          "코드 리뷰 수용"
+        ],
+        "기술스택": [
+          "React",
+          "TypeScript",
+          "NestJS",
+          "RDBMS",
+          "Docker"
+        ]
+      }
+    }
+  },
+  "sources": {
+    "ncs": [
+      "NCS 기반 채용 직무기술서 (응용SW엔지니어링 20010202): https://dym-upload.saramin.co.kr/upload/dym2_5/659/2683/filedown/2023-02-17/knfc_file_230217_06.pdf",
+      "NCS 기반 채용 직무 설명자료 (SW개발 및 운영): https://media-cdn.linkareer.com/activity_manager/applications/538905",
+      "UI/UX엔지니어링 능력단위 (UI 구현 2001020708, UI 테스트 2001020709): https://media-cdn.linkareer.com/activity_manager/applications/570240",
+      "정보처리기사 실기 과목 (인터페이스 구현, SQL 응용, 소프트웨어 개발 보안 구축): https://invione.com/course/lifelong-education-voucher/1024/000000004473",
+      "최신 버전 확인: https://www.ncs.go.kr"
+    ],
+    "posting": {
+      "frontend": [
+        "신입 Software Engineer, Frontend (신입~1년차): https://zighang.com/recruitment/d827b75c-fe89-4cc6-aabc-35aa19b34acd",
+        "(신입) 프론트엔드 개발자(React): https://www.rallit.com/positions/1731/%EC%8B%A0%EC%9E%85-%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C-%EA%B0%9C%EB%B0%9C%EC%9E%90-react",
+        "[인턴] react 프론트엔드 개발자: https://zighang.com/recruitment/e6176337-e4ce-448a-a373-67cd284727c2",
+        "프론트엔드 개발자 (인턴): https://zighang.com/recruitment/8d6186b9-596e-4ebf-95c5-c763fca65d77"
+      ],
+      "backend": [
+        "시스템개발팀 백엔드 개발자 (신입도 지원 가능): https://zighang.com/recruitment/eb2c678c-1305-42fa-bdfc-3b2a5c27e298",
+        "백엔드 개발자 (1-2년): https://zighang.com/recruitment/24e4a513-8099-4d47-a86e-0135b9ea8750",
+        "신규 앱 개발자 (백엔드, 1년 이상): https://zighang.com/recruitment/03fbc268-4561-4477-b40b-a67ed988e84c"
+      ],
+      "fullstack": [
+        "AI 활용한 풀스택 개발자 (2년 이하, 2026-05): https://zighang.com/recruitment/0139baea-6628-40c2-9039-3a4539b5165c",
+        "물류 서비스 풀스택 개발자 (신입~10년차): https://zighang.com/recruitment/585c6da8-bcfa-4948-825e-b9c5298393a3",
+        "[인턴] 웹 풀스택 엔지니어 (신입): https://zighang.com/recruitment/aa7f954e-44e8-4dab-b44f-d87a050932e5"
+      ]
+    }
+  }
+}

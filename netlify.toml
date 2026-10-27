@@ -1,0 +1,7 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  # esbuild 는 import 한 track_context.json 을 함수 번들 안에 넣는다
+  node_bundler = "esbuild"

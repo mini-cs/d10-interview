@@ -28,6 +28,21 @@
         <label>내 경험 <span class="hint">(30자 이상, 1000자 이내)</span>
           <textarea name="experience" rows="6" placeholder="프로젝트, 써 본 기술, 맡은 역할을 적어 주세요."></textarea>
         </label>
+        <details id="posting-box">
+          <summary>실제 회사 공고로 맞추기 (선택)</summary>
+          <p class="hint">비워 두면 기본 공고 요약(신입 공고 3~4개)으로 출제해요. 원문은 키워드 정리에만 쓰고 저장하지 않아요.</p>
+          <label>공고 원문 <span class="hint">(5000자 이내)</span>
+            <textarea id="posting-text" rows="6" placeholder="지원할 회사의 채용 공고를 붙여 넣어 주세요."></textarea>
+          </label>
+          <button type="button" id="posting-summarize">키워드로 정리</button>
+          <p class="waiting" id="posting-waiting" hidden></p>
+          <p class="notice" id="posting-notice" role="alert"></p>
+          <p class="hint">정리 결과를 확인하고 고쳐 주세요. 한 줄에 하나, 칸마다 6개 · 항목마다 30자까지. 직접 적어도 돼요.</p>
+          <label>주요업무 <textarea data-posting="주요업무" rows="3"></textarea></label>
+          <label>자격요건 <textarea data-posting="자격요건" rows="3"></textarea></label>
+          <label>우대사항 <textarea data-posting="우대사항" rows="3"></textarea></label>
+          <label>기술스택 <textarea data-posting="기술스택" rows="3"></textarea></label>
+        </details>
         <p class="warn">실제 개인정보나 회사 기밀은 적지 마세요. (무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어요)</p>
         <p class="notice" id="start-notice" role="alert"></p>
         <button type="submit">면접 시작</button>

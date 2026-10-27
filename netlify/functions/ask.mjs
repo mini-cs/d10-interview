@@ -2,8 +2,9 @@ import { GoogleGenAI } from '@google/genai';
 // JSON을 import 하면 번들러가 함수 파일 안에 함께 넣는다 (배포 후 파일 누락 없음)
 import trackContext from './data/track_context.json' with { type: 'json' };
 import {
-  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, INTERVIEWER, QUESTION_MAKER, EVAL_PANEL, EVAL_ANSWER, RETRY, REFINE_QUESTION,
-  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA, EVAL_PANEL_SCHEMA, EVAL_ANSWER_SCHEMA, RETRY_SCHEMA, REFINE_SCHEMA,
+  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, COMPANY_NOTE, POSTING_FIELDS,
+  INTERVIEWER, QUESTION_MAKER, EVAL_PANEL, EVAL_ANSWER, RETRY, REFINE_QUESTION, SUMMARIZE_POSTING,
+  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA, EVAL_PANEL_SCHEMA, EVAL_ANSWER_SCHEMA, RETRY_SCHEMA, REFINE_SCHEMA, POSTING_SCHEMA,
 } from './prompts.mjs';
 
 const MAX_TURNS = 6;
@@ -15,9 +16,13 @@ const TASKS = {
   eval_answer: { prompt: EVAL_ANSWER, schema: EVAL_ANSWER_SCHEMA, maxTurns: MAX_TURNS },
   retry: { prompt: RETRY, schema: RETRY_SCHEMA, maxTurns: 0 },
   refine_question: { prompt: REFINE_QUESTION, schema: REFINE_SCHEMA, maxTurns: 0 },
+  summarize_posting: { prompt: SUMMARIZE_POSTING, schema: POSTING_SCHEMA, maxTurns: 0 },
 };
 const MAX_EXPERIENCE = 1000;
 const MAX_ANSWER = 2000;
+const MAX_POSTING_TEXT = 5000;
+const MAX_POSTING_ITEM = 30;
+const MAX_POSTING_ITEMS = 6;
 const TIMEOUT_MS = 25000;
 const RETRY_WAIT_MS = 4000;
 
@@ -26,7 +31,8 @@ class UserError extends Error {
 }
 
 const json = (status, body) => Response.json(body, { status });
-const fill = (template, values) => template.replace(/\{(\w+)\}/g, (m, key) => values[key] ?? m);
+// {트랙 이름} 처럼 한글 · 띄어쓰기 칸도 채운다. 모르는 칸(예: JSON 예시)은 그대로 둔다
+const fill = (template, values) => template.replace(/\{([^{}]+)\}/g, (m, key) => (Object.hasOwn(values, key) ? values[key] : m));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function text(value, label, max) {
@@ -36,10 +42,25 @@ function text(value, label, max) {
   return value.trim();
 }
 
-function trackMaterial(track) {
+// 지원자가 입력한 공고 키워드. 칸마다 최대 6개, 항목마다 30자, 줄바꿈 없이. 모두 비면 null
+function readPosting(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) throw new UserError(400, '공고 형식이 올바르지 않아요.');
+  const posting = {};
+  for (const field of POSTING_FIELDS) {
+    const items = value[field] ?? [];
+    if (!Array.isArray(items) || items.length > MAX_POSTING_ITEMS) {
+      throw new UserError(400, `공고 ${field}: 항목은 ${MAX_POSTING_ITEMS}개까지예요.`);
+    }
+    posting[field] = items.map((item) => text(item, `공고 ${field} 항목`, MAX_POSTING_ITEM).replace(/\s+/g, ' ')).filter(Boolean);
+  }
+  return POSTING_FIELDS.some((f) => posting[f].length) ? posting : null;
+}
+
+function trackMaterial(track, customPosting) {
   const t = trackContext.tracks[track];
   const ncs = [...trackContext.common.ncs, ...t.ncs];
-  const postingEntries = Object.entries(t.posting).filter(([, items]) => items.length > 0);
+  const postingEntries = Object.entries(customPosting ?? t.posting).filter(([, items]) => items.length > 0);
   const posting = postingEntries.length
     ? postingEntries.map(([k, items]) => `${k}: ${items.join(', ')}`).join(' / ')
     : '공고 정보 없음';
@@ -94,9 +115,11 @@ async function handle(req) {
     throw new UserError(500, '서버에 GEMINI_API_KEY 또는 GEMINI_MODEL 설정이 없어요.');
   }
 
-  const { ncs, posting, allowedBasis } = trackMaterial(vars.track);
+  const customPosting = readPosting(vars.posting);
+  const { ncs, posting, allowedBasis } = trackMaterial(vars.track, customPosting);
   const values = {
     company: text(vars.company, '회사 이름', 100) || '클래스로',
+    company_note: customPosting ? COMPANY_NOTE.custom : COMPANY_NOTE.default,
     job: `${TRACKS[vars.track]} 개발`,
     experience: text(vars.experience, '경험', MAX_EXPERIENCE),
     ncs,
@@ -110,6 +133,7 @@ async function handle(req) {
     question: text(vars.question, '질문', 300),
     point: text(vars.point, '보는 점', 300),
     can_follow_up: vars.can_follow_up === '예' ? '예' : '아니오',
+    '트랙 이름': TRACKS[vars.track],
   });
 
   const turns = readTurns(vars.turns, task.maxTurns);
@@ -117,8 +141,10 @@ async function handle(req) {
   if (body.task === 'make_questions') contents = '질문을 만들어 주세요.';
   // retry: 다시 쓴 답만, refine_question: 지원자가 쓴 마지막 질문만
   else if (body.task === 'retry' || body.task === 'refine_question') contents = text(vars.answer, '답변', MAX_ANSWER);
+  // summarize_posting: 공고 원문만. 원문은 저장하지 않고 이번 호출에만 쓴다
+  else if (body.task === 'summarize_posting') contents = text(vars.posting_text, '공고 원문', MAX_POSTING_TEXT);
   else contents = turns.map((t) => `${t.role === 'candidate' ? '[지원자]' : '[면접관]'} ${t.text}`).join('\n');
-  if (!contents) throw new UserError(400, '답변을 적어 주세요.');
+  if (!contents) throw new UserError(400, body.task === 'summarize_posting' ? '공고 원문을 붙여 넣어 주세요.' : '답변을 적어 주세요.');
 
   const raw = await callGemini({
     model: process.env.GEMINI_MODEL,

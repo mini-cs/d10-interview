@@ -15,6 +15,9 @@ input, textarea, select {
   display: block; width: 100%; margin-top: 4px; padding: 10px;
   font: inherit; border: 1px solid #c8ccd2; border-radius: 8px; background: #fff;
 }
+#posting-box { margin-bottom: 12px; }
+#posting-box summary { margin-bottom: 4px; }
+#posting-box > button { margin-bottom: 4px; }
 fieldset { border: 1px solid #c8ccd2; border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; }
 fieldset label { display: inline-flex; align-items: center; gap: 4px; margin: 4px 16px 4px 0; font-weight: normal; }
 fieldset input { display: inline; width: auto; margin: 0; }

@@ -58,6 +58,7 @@ netlify dev              # http://localhost:8888
 ## 화면 흐름
 
 1. **시작**: 이름 · 트랙 · 회사(기본 '클래스로') · 내 경험(30~1000자)
+   - (선택) **실제 회사 공고로 맞추기**: 공고 원문을 붙여 `summarize_posting` 으로 키워드 4칸을 만들고, 확인 · 수정한 뒤 시작. 비워 두면 기본 공고 요약으로 출제
 2. **출제**: `make_questions` 1번 → `checkGenerated()` → `fillMissing()`
    → 순서는 자기소개(CSV) · 직무 · 직무 · 경험 · 상황. 질문마다 출처(`AI 출제` / `질문 은행`)를 기록
 3. **면접**: 답마다 `interviewer` 호출. 꼬리 질문은 질문당 최대 1번(`MAX_FOLLOW_UPS`)이고, AI가 더 묻자고 해도 코드가 넘긴다. 상태창에 질문 n/5 · 이해도 평균
@@ -82,6 +83,7 @@ netlify dev              # http://localhost:8888
 | `eval_answer` | `EVAL_ANSWER` · `EVAL_ANSWER_SCHEMA` | 본 답 + 꼬리 질문과 답 | 기준 4개, `weak`, `rewrite`, `check[]` |
 | `retry` | `RETRY` · `RETRY_SCHEMA` | 다시 쓴 답(`vars.answer`) | 기준 4개, `weak` |
 | `refine_question` | `REFINE_QUESTION` · `REFINE_SCHEMA` | 지원자가 쓴 질문(`vars.answer`) | `questions[3]`, `why` |
+| `summarize_posting` | `SUMMARIZE_POSTING` · `POSTING_SCHEMA` | 공고 원문(`vars.posting_text`, 저장 안 함) | `주요업무` · `자격요건` · `우대사항` · `기술스택` 각 최대 6개 |
 
 서버가 채우는 프롬프트 칸:
 
@@ -90,13 +92,15 @@ netlify dev              # http://localhost:8888
 | `{persona}` | `PERSONA` + `TRACK_FOCUS[track]` |
 | `{job}` | `TRACKS[track]` + ' 개발' |
 | `{ncs}` | `track_context.json` 의 `common.ncs` + 트랙 `ncs` |
-| `{posting}` | 트랙 `posting`(주요업무 · 자격요건 · 우대사항 · 기술스택). 모두 비면 '공고 정보 없음' |
+| `{posting}` | `vars.posting`(지원자가 입력한 공고)이 있으면 그것, 없으면 트랙 `posting`. 모두 비면 '공고 정보 없음' |
+| `{company_note}` | 입력한 공고가 있으면 `COMPANY_NOTE.custom`, 없으면 `COMPANY_NOTE.default` |
+| `{트랙 이름}` | `TRACKS[track]` (`summarize_posting` 용) |
 | `{context}` | `CONTEXT` 에 회사 · 직군 · 공고 · NCS · 경험을 채운 블록 |
 | `{question}` · `{point}` · `{can_follow_up}` | `vars` 에서 (`can_follow_up` 은 '예' 아니면 '아니오') |
 
 `allowedBasis` 는 이번에 넘긴 NCS · 공고 항목 전체 목록입니다. 브라우저의 `checkGenerated()` 가 출제 질문의 `basis` 를 이 목록과 글자 단위로 비교합니다. `sources` 는 프롬프트에 넣지 않습니다.
 
-**입력 검증 (400)**: 목록에 없는 task · 트랙(`frontend` · `backend` · `fullstack` 만), 경험 1000자 초과, 답변 2000자 초과, `turns` 형식 오류 · 개수 초과, 빈 답변
+**입력 검증 (400)**: 목록에 없는 task · 트랙(`frontend` · `backend` · `fullstack` 만), 경험 1000자 초과, 답변 2000자 초과, 공고 원문 5000자 초과, 공고 항목 30자 초과 · 칸마다 6개 초과, `turns` 형식 오류 · 개수 초과, 빈 답변
 
 **에러 (한국어 한 줄 `{ "error": "..." }`)**
 

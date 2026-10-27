@@ -60,8 +60,8 @@ summary { cursor: pointer; font-weight: 600; }
 .error-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #b42318; }
 .error-row button { padding: 6px 12px; }
 .muted { color: #6b7280; }
-#retry-box label { display: block; font-weight: 600; margin-bottom: 4px; }
-#retry-box textarea { margin: 8px 0 0; }
+#retry-box label, #refine-box label { display: block; font-weight: 600; margin-bottom: 4px; }
+#retry-box textarea, #refine-box textarea { margin: 8px 0 0; }
 .up { color: #15803d; }
 .down { color: #b42318; }
 

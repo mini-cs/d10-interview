@@ -57,6 +57,7 @@
       <button type="button" id="eval-start">위원 4명에게 평가받기</button>
       <p class="waiting" id="eval-waiting" hidden></p>
       <div id="eval-results"></div>
+      <button type="button" id="report-download" hidden>리포트 내려받기 (면접리포트.md)</button>
 
       <div id="retry-box" hidden>
         <h2>재도전</h2>
@@ -69,6 +70,16 @@
         <button type="button" id="retry-submit">다시 채점</button>
         <p class="waiting" id="retry-waiting" hidden></p>
         <div id="retry-result"></div>
+      </div>
+
+      <div id="refine-box">
+        <h2>마지막 질문 다듬기</h2>
+        <label for="refine-answer">면접 마지막에 면접관에게 할 질문</label>
+        <textarea id="refine-answer" rows="3" placeholder="예: 입사하면 어떤 일을 하게 되나요?"></textarea>
+        <p class="notice" id="refine-notice" role="alert"></p>
+        <button type="button" id="refine-submit">질문 다듬기</button>
+        <p class="waiting" id="refine-waiting" hidden></p>
+        <div id="refine-result"></div>
       </div>
     </section>
   </main>

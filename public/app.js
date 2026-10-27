@@ -1,6 +1,6 @@
 import {
   TOTAL_QUESTIONS, MAX_FOLLOW_UPS, parseCsv, pickIntro, checkGenerated, fillMissing,
-  clamp, averageUnderstanding, panelAverage, answerTotal, compare, REWRITE_BELOW, CRITERIA,
+  clamp, averageUnderstanding, panelAverage, answerTotal, compare, buildReport, REWRITE_BELOW, CRITERIA,
 } from './coach.js';
 
 const MIN_EXPERIENCE = 30;
@@ -221,6 +221,10 @@ function restart() {
   $('retry-answer').value = '';
   $('retry-notice').textContent = '';
   $('retry-waiting').hidden = true;
+  $('refine-answer').value = '';
+  $('refine-notice').textContent = '';
+  $('refine-waiting').hidden = true;
+  $('refine-result').replaceChildren();
   renderRetry();
   $('answer-form').hidden = false;
   $('eval-screen').hidden = true;
@@ -369,7 +373,18 @@ function renderEvaluation() {
 
 // ---- 재도전 ----
 
+function downloadReport() {
+  const blob = new Blob([buildReport(state)], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a');
+  a.href = url;
+  a.download = '면접리포트.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function renderRetry() {
+  $('report-download').hidden = !state.evaluation.some((e) => e?.data);
   const done = [];
   for (let i = 1; i < EVAL_COUNT; i++) if (state.evaluation[i]?.data) done.push(i);
   $('retry-box').hidden = !done.length;
@@ -438,6 +453,36 @@ async function submitRetry() {
   }
 }
 
+// ---- 마지막 질문 다듬기 ----
+
+async function submitRefine() {
+  if (state.busy) return;
+  const answer = $('refine-answer').value.trim();
+  const notice = $('refine-notice');
+  if (!answer) { notice.textContent = '면접관에게 할 질문을 적어 주세요.'; return; }
+  if (answer.length > MAX_ANSWER) { notice.textContent = `질문은 ${MAX_ANSWER}자 이내로 적어 주세요. (지금 ${answer.length}자)`; return; }
+  notice.textContent = '';
+
+  const session = state.session;
+  state.busy = true;
+  $('refine-waiting').hidden = false;
+  $('refine-waiting').textContent = '질문을 다듬고 있어요…';
+  try {
+    const { track, company, experience } = state.profile;
+    const data = await ask('refine_question', { track, company, experience, answer });
+    if (session !== state.session) return;
+    const box = $('refine-result');
+    box.replaceChildren();
+    const ol = el('ol');
+    for (const q of data.questions ?? []) ol.append(el('li', q));
+    box.append(ol, el('p', `원래 질문에서 빠진 것: ${data.why}`, 'muted'));
+  } catch (err) {
+    if (session === state.session) notice.textContent = err.message;
+  } finally {
+    if (session === state.session) { state.busy = false; $('refine-waiting').hidden = true; }
+  }
+}
+
 $('start-form').addEventListener('submit', startInterview);
 $('answer-form').addEventListener('submit', sendAnswer);
 $('restart').addEventListener('click', restart);
@@ -448,3 +493,5 @@ $('retry-pick').addEventListener('change', () => {
   renderRetryDetail();
 });
 $('retry-submit').addEventListener('click', submitRetry);
+$('report-download').addEventListener('click', downloadReport);
+$('refine-submit').addEventListener('click', submitRefine);

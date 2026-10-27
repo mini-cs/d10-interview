@@ -91,6 +91,49 @@ export function answerTotal(result) {
   return CRITERIA.reduce((a, [key]) => a + clamp(result?.[key], 0, 5), 0);
 }
 
+// 줄바꿈과 | 가 마크다운 목록 · 표를 깨지 않게
+const md = (s) => String(s ?? '').replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|');
+
+// 면접리포트.md 글. 점수는 모두 이 파일의 함수로 다시 계산한 값만 쓴다
+export function buildReport({ profile, questions, understanding, evaluation, retries }, date = new Date()) {
+  const lines = [
+    `# 면접 리포트 — ${profile.name}`,
+    '',
+    `- 날짜: ${date.toLocaleDateString('ko-KR')}`,
+    `- 회사 · 트랙: ${profile.company} · ${profile.trackLabel} 개발`,
+    `- 면접관이 본 이해도 평균: ${averageUnderstanding(understanding) ?? '-'} / 100`,
+    '',
+    '## 위원 4명 평가',
+  ];
+  const panel = evaluation[0]?.data;
+  if (panel) {
+    lines.push('', `위원 평균: **${panelAverage(panel.panel)} / 10**`, '', '| 위원 | 점수 | 뽑지 말아야 할 이유 | 좋은 점 |', '| --- | --- | --- | --- |');
+    for (const p of panel.panel) lines.push(`| ${md(p.role)} | ${clamp(p.score, 0, 10)} | ${md(p.against)} | ${md(p.good)} |`);
+    lines.push('', `- 판단이 갈린 곳: ${md(panel.conflict)}`, `- 모두 같은 판단: ${md(panel.agree)}`, '', '### 다음 연습에서 고칠 것');
+    panel.next.forEach((n, i) => lines.push(`${i + 1}. ${md(n)}`));
+  } else {
+    lines.push('', '평가 결과 없음');
+  }
+
+  lines.push('', '## 답변별 평가');
+  questions.forEach((q, idx) => {
+    const i = idx + 1;
+    const result = evaluation[i]?.data;
+    lines.push('', `### 질문 ${i} · ${q.type} (${q.source})`, '', `> ${md(q.question)}`, '');
+    lines.push(`- 내 답: ${q.turns.filter((t) => t.role === 'candidate').map((t) => md(t.text)).join(' / ')}`);
+    if (!result) { lines.push('- 평가 결과 없음'); return; }
+    lines.push(`- 답변 점수: **${answerTotal(result)} / 20** (${CRITERIA.map(([k, label]) => `${label} ${clamp(result[k], 0, 5)}`).join(' · ')})`);
+    lines.push(`- 약한 점: ${md(result.weak)}`);
+    if (answerTotal(result) < REWRITE_BELOW) lines.push(`- 고친 답: ${md(result.rewrite)}`);
+    const retry = retries[i];
+    if (retry) {
+      const c = compare(result, retry.data);
+      lines.push(`- 재도전: ${c.before} → ${c.after} (${c.diffText})`, `- 재도전 답: ${md(retry.answer)}`);
+    }
+  });
+  return lines.join('\n') + '\n';
+}
+
 // 재도전 전 → 후 비교. 같은 기준 4개로 잘라 쓴 점수끼리 비교한다
 export function compare(before, after) {
   const beforeTotal = answerTotal(before);

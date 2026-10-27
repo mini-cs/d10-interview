@@ -2,8 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 // JSON을 import 하면 번들러가 함수 파일 안에 함께 넣는다 (배포 후 파일 누락 없음)
 import trackContext from './data/track_context.json' with { type: 'json' };
 import {
-  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, INTERVIEWER, QUESTION_MAKER, EVAL_PANEL, EVAL_ANSWER, RETRY,
-  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA, EVAL_PANEL_SCHEMA, EVAL_ANSWER_SCHEMA, RETRY_SCHEMA,
+  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, INTERVIEWER, QUESTION_MAKER, EVAL_PANEL, EVAL_ANSWER, RETRY, REFINE_QUESTION,
+  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA, EVAL_PANEL_SCHEMA, EVAL_ANSWER_SCHEMA, RETRY_SCHEMA, REFINE_SCHEMA,
 } from './prompts.mjs';
 
 const MAX_TURNS = 6;
@@ -14,6 +14,7 @@ const TASKS = {
   eval_panel: { prompt: EVAL_PANEL, schema: EVAL_PANEL_SCHEMA, maxTurns: MAX_TURNS * 5 },
   eval_answer: { prompt: EVAL_ANSWER, schema: EVAL_ANSWER_SCHEMA, maxTurns: MAX_TURNS },
   retry: { prompt: RETRY, schema: RETRY_SCHEMA, maxTurns: 0 },
+  refine_question: { prompt: REFINE_QUESTION, schema: REFINE_SCHEMA, maxTurns: 0 },
 };
 const MAX_EXPERIENCE = 1000;
 const MAX_ANSWER = 2000;
@@ -114,7 +115,8 @@ async function handle(req) {
   const turns = readTurns(vars.turns, task.maxTurns);
   let contents;
   if (body.task === 'make_questions') contents = '질문을 만들어 주세요.';
-  else if (body.task === 'retry') contents = text(vars.answer, '답변', MAX_ANSWER); // 다시 쓴 답만
+  // retry: 다시 쓴 답만, refine_question: 지원자가 쓴 마지막 질문만
+  else if (body.task === 'retry' || body.task === 'refine_question') contents = text(vars.answer, '답변', MAX_ANSWER);
   else contents = turns.map((t) => `${t.role === 'candidate' ? '[지원자]' : '[면접관]'} ${t.text}`).join('\n');
   if (!contents) throw new UserError(400, '답변을 적어 주세요.');
 

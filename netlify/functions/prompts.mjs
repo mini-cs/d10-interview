@@ -76,6 +76,13 @@ export const RETRY = `너는 면접 평가자야. 아래 질문에 대한 지원
 [이 질문에서 보는 점] {point}
 출력은 JSON 하나만.`;
 
+export const REFINE_QUESTION = `지원자가 면접 마지막에 면접관에게 할 질문을 더 좋은 질문으로 고쳐 줘.
+{context}
+- 고친 질문 3개: 회사 · 직무 · 성장 관점 하나씩, 각 50 자 이내
+- 원래 질문에서 빠진 것(대상 · 목적 · 구체성)을 why 에 1문장
+- 회사에 대해 확인되지 않은 사실을 전제로 하지 마
+출력은 JSON 하나만: questions(목록), why(글)`;
+
 export const INTERVIEWER_SCHEMA = {
   type: 'object',
   properties: {
@@ -157,4 +164,13 @@ export const RETRY_SCHEMA = {
     weak: { type: 'string' },
   },
   required: ['specific', 'relevance', 'structure', 'evidence', 'weak'],
+};
+
+export const REFINE_SCHEMA = {
+  type: 'object',
+  properties: {
+    questions: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'string' } },
+    why: { type: 'string' },
+  },
+  required: ['questions', 'why'],
 };

@@ -1,6 +1,6 @@
 import {
   TOTAL_QUESTIONS, MAX_FOLLOW_UPS, parseCsv, pickIntro, checkGenerated, fillMissing,
-  clamp, averageUnderstanding,
+  clamp, averageUnderstanding, panelAverage, answerTotal, REWRITE_BELOW, CRITERIA,
 } from './coach.js';
 
 const MIN_EXPERIENCE = 30;
@@ -21,6 +21,8 @@ function newState() {
     index: 0,
     understanding: [],
     finished: false,
+    // [0] 위원 평가, [1..5] 답변별 평가. 각 칸은 null(아직) · { data } · { error }
+    evaluation: Array(TOTAL_QUESTIONS + 1).fill(null),
   };
 }
 
@@ -84,6 +86,9 @@ function nextQuestion() {
     state.finished = true;
     renderStatus();
     bubble('system', '면접이 끝났어요. 수고하셨어요.');
+    $('answer-form').hidden = true;
+    $('eval-screen').hidden = false;
+    renderEvaluation();
     return;
   }
   showQuestion();
@@ -211,10 +216,152 @@ function restart() {
   $('chat-notice').textContent = '';
   $('answer').value = '';
   setWaiting(null);
+  $('eval-waiting').hidden = true;
+  $('eval-results').replaceChildren();
+  $('answer-form').hidden = false;
+  $('eval-screen').hidden = true;
   $('interview-screen').hidden = true;
   $('start-screen').hidden = false;
+}
+
+// ---- 평가 ----
+
+const EVAL_COUNT = TOTAL_QUESTIONS + 1;
+
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+function evalRequest(i) {
+  const { track, company, experience } = state.profile;
+  if (i === 0) {
+    return ['eval_panel', { track, company, experience, turns: state.questions.flatMap((q) => q.turns) }];
+  }
+  const q = state.questions[i - 1];
+  return ['eval_answer', { track, company, experience, question: q.question, point: q.point, turns: q.turns }];
+}
+
+// 무료 한도 때문에 한 번에 하나씩 차례로 부른다
+async function runEvaluation(indices) {
+  if (state.busy) return;
+  state.busy = true;
+  const session = state.session;
+  $('eval-start').hidden = true;
+  try {
+    for (const i of indices) {
+      $('eval-waiting').hidden = false;
+      $('eval-waiting').textContent = `평가 중 ${i + 1}/${EVAL_COUNT}`;
+      let result;
+      try {
+        result = { data: await ask(...evalRequest(i)) };
+      } catch (err) {
+        result = { error: err.message };
+      }
+      if (session !== state.session) return;
+      state.evaluation[i] = result;
+      renderEvaluation();
+    }
+  } finally {
+    if (session === state.session) {
+      state.busy = false;
+      $('eval-waiting').hidden = true;
+    }
+  }
+}
+
+function errorRow(i, message) {
+  const row = el('div', undefined, 'error-row');
+  row.append(el('span', message));
+  const button = el('button', '다시 시도');
+  button.type = 'button';
+  button.addEventListener('click', () => runEvaluation([i]));
+  row.append(button);
+  return row;
+}
+
+function renderPanel(item) {
+  const box = el('div', undefined, 'card');
+  box.append(el('h3', '위원 4명 평가'));
+  if (!item) { box.append(el('p', '아직 평가 전이에요.', 'muted')); return box; }
+  if (item.error) { box.append(errorRow(0, item.error)); return box; }
+
+  const { panel, conflict, agree, next } = item.data;
+  const avg = panelAverage(panel);
+  box.append(el('p', `위원 평균 ${avg ?? '-'} / 10`, 'big'));
+
+  const table = el('table');
+  const head = table.createTHead().insertRow();
+  for (const h of ['위원', '뽑지 말아야 할 이유', '좋은 점', '점수']) head.append(el('th', h));
+  const body = table.createTBody();
+  for (const p of panel ?? []) {
+    const row = body.insertRow();
+    row.append(el('td', p.role), el('td', p.against), el('td', p.good), el('td', `${clamp(p.score, 0, 10)}`, 'num'));
+  }
+  const wrap = el('div', undefined, 'table-wrap');
+  wrap.append(table);
+  box.append(wrap);
+
+  box.append(el('h3', '판단이 갈린 곳'), el('p', conflict));
+  box.append(el('h3', '모두 같은 판단'), el('p', agree));
+  box.append(el('h3', '다음 연습에서 고칠 것'));
+  const ol = el('ol');
+  for (const n of next ?? []) ol.append(el('li', n));
+  box.append(ol);
+  return box;
+}
+
+function renderAnswer(i) {
+  const q = state.questions[i - 1];
+  const item = state.evaluation[i];
+  const details = el('details');
+  const total = item?.data ? answerTotal(item.data) : null;
+  const score = item?.data ? `${total} / 20` : item?.error ? '평가 실패' : '평가 전';
+  details.append(el('summary', `질문 ${i} · ${q.type} (${q.source}) — ${score}`));
+  details.append(el('p', q.question));
+  details.append(el('p', `내 답: ${q.turns.filter((t) => t.role === 'candidate').map((t) => t.text).join(' / ')}`, 'muted'));
+
+  if (item?.error) {
+    details.open = true;
+    details.append(errorRow(i, item.error));
+    return details;
+  }
+  if (!item) return details;
+
+  const r = item.data;
+  const table = el('table');
+  const body = table.createTBody();
+  for (const [key, label] of CRITERIA) {
+    const row = body.insertRow();
+    row.append(el('th', label), el('td', `${clamp(r[key], 0, 5)} / 5`, 'num'));
+  }
+  details.append(table);
+  details.append(el('p', `가장 약한 점: ${r.weak}`));
+
+  if (total < REWRITE_BELOW) {
+    details.append(el('h3', '고친 답'), el('p', r.rewrite, 'rewrite'));
+    if (r.check?.length) {
+      details.append(el('h3', '사람이 확인할 것'));
+      const ul = el('ul');
+      for (const c of r.check) ul.append(el('li', c));
+      details.append(ul);
+    }
+  }
+  return details;
+}
+
+function renderEvaluation() {
+  const results = $('eval-results');
+  results.replaceChildren();
+  $('eval-start').hidden = state.evaluation.some(Boolean);
+  results.append(renderPanel(state.evaluation[0]));
+  results.append(el('h3', '답변별 평가'));
+  for (let i = 1; i < EVAL_COUNT; i++) results.append(renderAnswer(i));
 }
 
 $('start-form').addEventListener('submit', startInterview);
 $('answer-form').addEventListener('submit', sendAnswer);
 $('restart').addEventListener('click', restart);
+$('eval-start').addEventListener('click', () => runEvaluation([...Array(EVAL_COUNT).keys()]));

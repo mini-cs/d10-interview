@@ -45,6 +45,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .bubble.system { align-self: center; background: transparent; color: #555; font-size: .9rem; }
 .bubble .tag { display: block; font-size: .75rem; color: #6b7280; margin-bottom: 2px; }
 
+#eval-screen h2 { font-size: 1.2rem; margin-top: 24px; }
+#eval-screen h3 { font-size: 1rem; margin: 16px 0 6px; }
+.card { background: #fff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { border-bottom: 1px solid #e1e4e8; padding: 6px 8px; text-align: left; vertical-align: top; }
+th { background: #f4f5f7; white-space: nowrap; }
+td.num { text-align: right; white-space: nowrap; }
+.big { font-size: 1.1rem; font-weight: 700; }
+details { background: #fff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+summary { cursor: pointer; font-weight: 600; }
+.rewrite { background: #f0fdf4; border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+.error-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #b42318; }
+.error-row button { padding: 6px 12px; }
+.muted { color: #6b7280; }
+
 @media (max-width: 480px) {
   .bubble { max-width: 95%; }
 }

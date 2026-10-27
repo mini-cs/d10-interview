@@ -2,17 +2,20 @@ import { GoogleGenAI } from '@google/genai';
 // JSON을 import 하면 번들러가 함수 파일 안에 함께 넣는다 (배포 후 파일 누락 없음)
 import trackContext from './data/track_context.json' with { type: 'json' };
 import {
-  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, INTERVIEWER, QUESTION_MAKER,
-  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA,
+  TRACKS, PERSONA, TRACK_FOCUS, CONTEXT, INTERVIEWER, QUESTION_MAKER, EVAL_PANEL, EVAL_ANSWER,
+  INTERVIEWER_SCHEMA, QUESTIONS_SCHEMA, EVAL_PANEL_SCHEMA, EVAL_ANSWER_SCHEMA,
 } from './prompts.mjs';
 
+const MAX_TURNS = 6;
 const TASKS = {
-  make_questions: { prompt: QUESTION_MAKER, schema: QUESTIONS_SCHEMA },
-  interviewer: { prompt: INTERVIEWER, schema: INTERVIEWER_SCHEMA },
+  make_questions: { prompt: QUESTION_MAKER, schema: QUESTIONS_SCHEMA, maxTurns: 0 },
+  interviewer: { prompt: INTERVIEWER, schema: INTERVIEWER_SCHEMA, maxTurns: MAX_TURNS },
+  // 면접 전체 기록: 5문제 × 질문당 최대 6턴
+  eval_panel: { prompt: EVAL_PANEL, schema: EVAL_PANEL_SCHEMA, maxTurns: MAX_TURNS * 5 },
+  eval_answer: { prompt: EVAL_ANSWER, schema: EVAL_ANSWER_SCHEMA, maxTurns: MAX_TURNS },
 };
 const MAX_EXPERIENCE = 1000;
 const MAX_ANSWER = 2000;
-const MAX_TURNS = 6;
 const TIMEOUT_MS = 25000;
 const RETRY_WAIT_MS = 4000;
 
@@ -42,9 +45,9 @@ function trackMaterial(track) {
   return { ncs: ncs.join(', '), posting, allowedBasis };
 }
 
-function readTurns(turns) {
+function readTurns(turns, maxTurns) {
   if (turns === undefined) return [];
-  if (!Array.isArray(turns) || turns.length > MAX_TURNS) throw new UserError(400, '대화 기록 형식이 올바르지 않아요.');
+  if (!Array.isArray(turns) || turns.length > maxTurns) throw new UserError(400, '대화 기록 형식이 올바르지 않아요.');
   return turns.map((t) => {
     if (t?.role !== 'interviewer' && t?.role !== 'candidate') throw new UserError(400, '대화 기록 형식이 올바르지 않아요.');
     return { role: t.role, text: text(t.text, '답변', MAX_ANSWER) };
@@ -107,10 +110,10 @@ async function handle(req) {
     can_follow_up: vars.can_follow_up === '예' ? '예' : '아니오',
   });
 
-  const turns = readTurns(vars.turns);
-  const contents = body.task === 'interviewer'
-    ? turns.map((t) => `${t.role === 'candidate' ? '[지원자]' : '[면접관]'} ${t.text}`).join('\n')
-    : '질문을 만들어 주세요.';
+  const turns = readTurns(vars.turns, task.maxTurns);
+  const contents = body.task === 'make_questions'
+    ? '질문을 만들어 주세요.'
+    : turns.map((t) => `${t.role === 'candidate' ? '[지원자]' : '[면접관]'} ${t.text}`).join('\n');
   if (!contents) throw new UserError(400, '답변을 적어 주세요.');
 
   const raw = await callGemini({

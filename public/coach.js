@@ -72,3 +72,21 @@ export function averageUnderstanding(list) {
   if (!list.length) return null;
   return Math.round(list.reduce((a, b) => a + b, 0) / list.length);
 }
+
+// 이 점수 미만인 답만 고친 답을 보여 준다
+export const REWRITE_BELOW = 14;
+export const CRITERIA = [
+  ['specific', '구체성'], ['relevance', '직무 연관'], ['structure', '구조'], ['evidence', '근거 · 검증'],
+];
+
+// 위원 점수(0~10)를 잘라 쓴 평균, 소수 첫째 자리
+export function panelAverage(panel) {
+  if (!Array.isArray(panel) || !panel.length) return null;
+  const sum = panel.reduce((a, p) => a + clamp(p?.score, 0, 10), 0);
+  return Math.round((sum / panel.length) * 10) / 10;
+}
+
+// 기준 4개(각 0~5)를 잘라 쓴 합계 0~20. AI가 쓴 합계는 쓰지 않는다
+export function answerTotal(result) {
+  return CRITERIA.reduce((a, [key]) => a + clamp(result?.[key], 0, 5), 0);
+}

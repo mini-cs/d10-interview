@@ -1,6 +1,7 @@
 import {
   TOTAL_QUESTIONS, MAX_FOLLOW_UPS, parseCsv, pickIntro, checkGenerated, fillMissing,
   clamp, averageUnderstanding, panelAverage, answerTotal, compare, buildReport, REWRITE_BELOW, CRITERIA,
+  POSTING_FIELDS, parsePosting,
 } from './coach.js';
 
 const MIN_EXPERIENCE = 30;
@@ -33,7 +34,8 @@ async function ask(task, vars) {
     res = await fetch('/.netlify/functions/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task, vars }),
+      // 입력한 공고가 있으면 모든 호출에 같이 보낸다 (서버가 {posting} · allowedBasis 를 그 공고로 채움)
+      body: JSON.stringify({ task, vars: { ...vars, posting: state.profile?.posting ?? undefined } }),
     });
   } catch {
     throw new Error('서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.');
@@ -105,6 +107,8 @@ async function startInterview(event) {
   if (!checked) { notice.textContent = '트랙을 골라 주세요.'; return; }
   if (experience.length < MIN_EXPERIENCE) { notice.textContent = `내 경험을 ${MIN_EXPERIENCE}자 이상 적어 주세요. (지금 ${experience.length}자)`; return; }
   if (experience.length > MAX_EXPERIENCE) { notice.textContent = `내 경험은 ${MAX_EXPERIENCE}자 이내로 적어 주세요. (지금 ${experience.length}자)`; return; }
+  const { posting, error } = parsePosting(postingTexts());
+  if (error) { notice.textContent = error; $('posting-box').open = true; return; }
   notice.textContent = '';
 
   state.busy = true;
@@ -115,6 +119,7 @@ async function startInterview(event) {
     trackLabel: checked.parentElement.textContent.trim(),
     company: form.company.value.trim() || '클래스로',
     experience,
+    posting,
   };
   $('start-screen').hidden = true;
   $('interview-screen').hidden = false;
@@ -144,7 +149,8 @@ async function startInterview(event) {
     state.questions = [pickIntro(rows), ...fillMissing(passed, rows)]
       .map((q) => ({ ...q, turns: [], followUps: 0 }));
     state.index = 0;
-    bubble('system', `${state.profile.name} 님, ${state.profile.company} ${state.profile.trackLabel} 개발 면접을 시작할게요.`);
+    const source = state.profile.posting ? '입력한 공고' : '기본 공고 요약';
+    bubble('system', `${state.profile.name} 님, ${state.profile.company} ${state.profile.trackLabel} 개발 면접을 시작할게요. (출제 기준: ${source})`);
     showQuestion();
   } catch (err) {
     if (session === state.session) $('chat-notice').textContent = err.message;
@@ -453,6 +459,35 @@ async function submitRetry() {
   }
 }
 
+// ---- 회사 공고 ----
+
+const postingArea = (field) => document.querySelector(`textarea[data-posting="${field}"]`);
+const postingTexts = () => Object.fromEntries(POSTING_FIELDS.map((f) => [f, postingArea(f).value]));
+
+async function summarizePosting() {
+  if (state.busy) return;
+  const notice = $('posting-notice');
+  const checked = document.querySelector('input[name="track"]:checked');
+  const text = $('posting-text').value.trim();
+  if (!checked) { notice.textContent = '트랙을 먼저 골라 주세요.'; return; }
+  if (!text) { notice.textContent = '공고 원문을 붙여 넣어 주세요.'; return; }
+  if (text.length > 5000) { notice.textContent = `공고 원문은 5000자 이내로 붙여 넣어 주세요. (지금 ${text.length}자)`; return; }
+  notice.textContent = '';
+
+  state.busy = true;
+  $('posting-waiting').hidden = false;
+  $('posting-waiting').textContent = '공고를 키워드로 정리하고 있어요…';
+  try {
+    const data = await ask('summarize_posting', { track: checked.value, posting_text: text });
+    for (const f of POSTING_FIELDS) postingArea(f).value = (data[f] ?? []).join('\n');
+  } catch (err) {
+    notice.textContent = err.message;
+  } finally {
+    state.busy = false;
+    $('posting-waiting').hidden = true;
+  }
+}
+
 // ---- 마지막 질문 다듬기 ----
 
 async function submitRefine() {
@@ -495,3 +530,4 @@ $('retry-pick').addEventListener('change', () => {
 $('retry-submit').addEventListener('click', submitRetry);
 $('report-download').addEventListener('click', downloadReport);
 $('refine-submit').addEventListener('click', submitRefine);
+$('posting-summarize').addEventListener('click', summarizePosting);

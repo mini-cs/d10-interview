@@ -73,6 +73,24 @@ export function averageUnderstanding(list) {
   return Math.round(list.reduce((a, b) => a + b, 0) / list.length);
 }
 
+// 서버 ask.mjs 와 같은 제한 (서버도 다시 검사한다)
+export const POSTING_FIELDS = ['주요업무', '자격요건', '우대사항', '기술스택'];
+const MAX_POSTING_ITEM = 30;
+const MAX_POSTING_ITEMS = 6;
+
+// 칸별 글(한 줄에 하나)을 공고 객체로. 모두 비면 posting 은 null
+export function parsePosting(texts) {
+  const posting = {};
+  for (const field of POSTING_FIELDS) {
+    const items = String(texts[field] ?? '').split('\n').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean);
+    if (items.length > MAX_POSTING_ITEMS) return { error: `공고 ${field}: 항목은 ${MAX_POSTING_ITEMS}개까지예요. (지금 ${items.length}개)` };
+    const long = items.find((s) => s.length > MAX_POSTING_ITEM);
+    if (long) return { error: `공고 ${field}: "${long.slice(0, 12)}…" 항목이 ${MAX_POSTING_ITEM}자를 넘어요.` };
+    posting[field] = items;
+  }
+  return { posting: POSTING_FIELDS.some((f) => posting[f].length) ? posting : null };
+}
+
 // 이 점수 미만인 답만 고친 답을 보여 준다
 export const REWRITE_BELOW = 14;
 export const CRITERIA = [
@@ -101,6 +119,7 @@ export function buildReport({ profile, questions, understanding, evaluation, ret
     '',
     `- 날짜: ${date.toLocaleDateString('ko-KR')}`,
     `- 회사 · 트랙: ${profile.company} · ${profile.trackLabel} 개발`,
+    `- 출제 공고: ${profile.posting ? '지원자가 입력한 공고' : '기본 공고 요약'}`,
     `- 면접관이 본 이해도 평균: ${averageUnderstanding(understanding) ?? '-'} / 100`,
     '',
     '## 위원 4명 평가',

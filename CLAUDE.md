@@ -43,11 +43,12 @@ d10-interview/
 
 ## 서버 호출 규칙
 - 브라우저는 `POST /.netlify/functions/ask` 에 `{ task, vars }` 만 보낸다. **브라우저가 프롬프트 문장을 보내지 않는다**
-- task 목록: `make_questions` · `interviewer` · `eval_panel` · `eval_answer` · `retry` · `refine_question`. 목록에 없으면 400
+- task 목록: `make_questions` · `interviewer` · `eval_panel` · `eval_answer` · `retry` · `refine_question` · `summarize_posting`. 목록에 없으면 400
 - 트랙은 `frontend` · `backend` · `fullstack` 세 값만 받는다. 목록에 없으면 400. **브라우저가 보낸 글자를 프롬프트에 그대로 넣지 않고**, `prompts.mjs` 의 `TRACKS` 에서 한국어 이름과 `TRACK_FOCUS` 문장을 골라 넣는다
 - `{persona}` 는 `PERSONA` + 고른 트랙의 `TRACK_FOCUS`, `{job}` 은 '프론트엔드 개발' 같은 트랙 이름으로 서버가 채운다
 - `{ncs}` 는 `track_context.json` 의 `common.ncs` + 고른 트랙의 `ncs`, `{posting}` 은 고른 트랙의 `posting` 을 서버가 글로 바꿔 채운다. 공고 칸이 모두 비면 '공고 정보 없음'. `sources` 는 프롬프트에 넣지 않는다
-- 입력 길이 제한: 답변 1개 2000자, 경험 1000자. 넘으면 400과 한국어 안내
+- 지원자가 공고를 입력하면(`vars.posting`, 칸 4개) `{posting}` · `allowedBasis` 를 그 공고로 채우고 `{company_note}` 는 `COMPANY_NOTE.custom`. 공고 원문은 `summarize_posting` 의 contents 로만 쓰고 저장하지 않는다
+- 입력 길이 제한: 답변 1개 2000자, 경험 1000자, 공고 원문 5000자, 공고 항목 30자 · 칸마다 6개. 넘으면 400과 한국어 안내
 - Gemini 호출은 `@google/genai` 패키지 하나로:
   - `ai.models.generateContent({ model, contents, config })`
   - `config.systemInstruction` 에 프롬프트, `config.responseMimeType = "application/json"`, `config.responseJsonSchema` 에 스키마

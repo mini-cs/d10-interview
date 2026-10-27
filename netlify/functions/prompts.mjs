@@ -11,7 +11,13 @@ export const TRACK_FOCUS = {
   fullstack: '화면 → API → DB까지 요청 한 번의 전체 흐름, 프론트와 백엔드 사이의 API 설계, 검증을 어느 쪽에서 할지 판단',
 };
 
-export const CONTEXT = `- 회사: {company} (원데이 클래스 플랫폼, 수업용 가상 회사)
+// {company_note}: 기본 공고면 default, 지원자가 공고를 입력하면 custom (사용자 결정으로 괄호를 칸으로 바꿈)
+export const COMPANY_NOTE = {
+  default: '원데이 클래스 플랫폼, 수업용 가상 회사',
+  custom: '지원자가 입력한 채용 공고 기준',
+};
+
+export const CONTEXT = `- 회사: {company} ({company_note})
 - 지원 직군: {job} 신입
 - 이 직군 채용 공고 요약: {posting}
 - 관련 NCS 능력단위: {ncs}
@@ -82,6 +88,22 @@ export const REFINE_QUESTION = `지원자가 면접 마지막에 면접관에게
 - 원래 질문에서 빠진 것(대상 · 목적 · 구체성)을 why 에 1문장
 - 회사에 대해 확인되지 않은 사실을 전제로 하지 마
 출력은 JSON 하나만: questions(목록), why(글)`;
+
+// 내가_채울_프롬프트.md STEP 0 공고 정리 프롬프트. 원문은 contents 로 보내므로 끝의 """(공고 원문들)""" 세 줄만 뺐다
+export const SUMMARIZE_POSTING = `아래는 {트랙 이름} 신입 채용 공고 원문이야. 면접 질문 재료로 쓰려고 해.
+- 주요업무 · 자격요건 · 우대사항 · 기술스택을 각각 짧은 구절(15자 이내)로 뽑아 줘
+- 원문 문장을 그대로 옮기지 말고, 회사 이름 · 서비스 이름 · 연봉 · 주소는 빼 줘
+- 원문에 없는 항목은 지어내지 말고 빈 목록으로 둬
+- 여러 공고에 같이 나온 항목을 앞에, 항목마다 최대 6개
+출력은 JSON 하나만: {"주요업무":[],"자격요건":[],"우대사항":[],"기술스택":[]}`;
+
+export const POSTING_FIELDS = ['주요업무', '자격요건', '우대사항', '기술스택'];
+
+export const POSTING_SCHEMA = {
+  type: 'object',
+  properties: Object.fromEntries(POSTING_FIELDS.map((f) => [f, { type: 'array', maxItems: 6, items: { type: 'string' } }])),
+  required: POSTING_FIELDS,
+};
 
 export const INTERVIEWER_SCHEMA = {
   type: 'object',

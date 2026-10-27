@@ -11,7 +11,7 @@ h1 { font-size: 1.4rem; }
 h1 small { font-size: .85rem; color: #666; font-weight: normal; }
 
 form label { display: block; margin-bottom: 12px; font-weight: 600; }
-input, textarea {
+input, textarea, select {
   display: block; width: 100%; margin-top: 4px; padding: 10px;
   font: inherit; border: 1px solid #c8ccd2; border-radius: 8px; background: #fff;
 }
@@ -60,6 +60,10 @@ summary { cursor: pointer; font-weight: 600; }
 .error-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #b42318; }
 .error-row button { padding: 6px 12px; }
 .muted { color: #6b7280; }
+#retry-box label { display: block; font-weight: 600; margin-bottom: 4px; }
+#retry-box textarea { margin: 8px 0 0; }
+.up { color: #15803d; }
+.down { color: #b42318; }
 
 @media (max-width: 480px) {
   .bubble { max-width: 95%; }

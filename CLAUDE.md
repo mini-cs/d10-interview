@@ -1,6 +1,6 @@
 # AI 면접 코치 — 프로젝트 규칙 (개발 직군 · Netlify + Gemini판)
 
-> 이 파일을 `d10-interview/CLAUDE.md` 로 넣고 Claude Code를 새로 시작해요.
+> 이 파일을 프로젝트 맨 위 폴더 `d10-interview/CLAUDE.md` 에 넣고 Claude Code를 새로 시작해요. `d10-interview` 가 곧 깃 저장소예요.
 > 맨 아래 "실수에서 배운 규칙"에 오늘 찾은 AI 실수를 한 줄씩 더해요.
 
 ## 무엇을 만드나
@@ -12,7 +12,7 @@
 - 브라우저에 내려가는 HTML · JS는 누구나 열어볼 수 있다. 무료 키라도 노출되면 남이 내 한도를 다 써 버린다.
 - 그래서 **Gemini 호출과 키는 Netlify Functions(서버)에만** 둔다.
 
-## 폴더 구조 (이 구조를 지켜)
+## 폴더 구조 (이 구조를 지켜, `d10-interview` 가 깃 저장소 맨 위)
 ```
 d10-interview/
 ├─ public/                  ← 브라우저에 배포되는 화면

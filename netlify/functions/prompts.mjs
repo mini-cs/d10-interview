@@ -68,6 +68,14 @@ export const EVAL_ANSWER = `너는 모의면접 평가자야. 아래 질문 하�
 3. check 에 사람이 확인할 사실 0~2개.
 출력은 JSON 하나만. 점수 합계는 쓰지 마 (앱이 계산해).`;
 
+// [이번 질문] · [이 질문에서 보는 점] 두 줄은 질문 없이 채점되지 않도록 사용자 승인으로 더함
+export const RETRY = `너는 면접 평가자야. 아래 질문에 대한 지원자의 답 하나를 기준 4개(구체성 / 직무 연관 / 구조 / 근거 · 검증)로 각각 0~5점.
+가장 약한 점 하나를 weak 에 1문장. 지원자가 쓰지 않은 사실은 지어내지 마.
+{context}
+[이번 질문] {question}
+[이 질문에서 보는 점] {point}
+출력은 JSON 하나만.`;
+
 export const INTERVIEWER_SCHEMA = {
   type: 'object',
   properties: {
@@ -137,4 +145,16 @@ export const EVAL_ANSWER_SCHEMA = {
     check: { type: 'array', maxItems: 2, items: { type: 'string' } },
   },
   required: ['specific', 'relevance', 'structure', 'evidence', 'weak', 'rewrite', 'check'],
+};
+
+export const RETRY_SCHEMA = {
+  type: 'object',
+  properties: {
+    specific: { type: 'integer' },
+    relevance: { type: 'integer' },
+    structure: { type: 'integer' },
+    evidence: { type: 'integer' },
+    weak: { type: 'string' },
+  },
+  required: ['specific', 'relevance', 'structure', 'evidence', 'weak'],
 };

@@ -79,14 +79,28 @@ export const CRITERIA = [
   ['specific', '구체성'], ['relevance', '직무 연관'], ['structure', '구조'], ['evidence', '근거 · 검증'],
 ];
 
-// 위원 점수(0~10)를 잘라 쓴 평균, 소수 첫째 자리
+// 위원 점수(0~10)를 잘라 쓴 평균. 반올림하지 않아 손으로 나눈 값(예: 4.25)과 같다
 export function panelAverage(panel) {
   if (!Array.isArray(panel) || !panel.length) return null;
   const sum = panel.reduce((a, p) => a + clamp(p?.score, 0, 10), 0);
-  return Math.round((sum / panel.length) * 10) / 10;
+  return sum / panel.length;
 }
 
 // 기준 4개(각 0~5)를 잘라 쓴 합계 0~20. AI가 쓴 합계는 쓰지 않는다
 export function answerTotal(result) {
   return CRITERIA.reduce((a, [key]) => a + clamp(result?.[key], 0, 5), 0);
+}
+
+// 재도전 전 → 후 비교. 같은 기준 4개로 잘라 쓴 점수끼리 비교한다
+export function compare(before, after) {
+  const beforeTotal = answerTotal(before);
+  const afterTotal = answerTotal(after);
+  const diff = afterTotal - beforeTotal;
+  return {
+    before: beforeTotal,
+    after: afterTotal,
+    diff,
+    diffText: diff > 0 ? `+${diff}` : `${diff}`,
+    rows: CRITERIA.map(([key, label]) => ({ label, before: clamp(before?.[key], 0, 5), after: clamp(after?.[key], 0, 5) })),
+  };
 }

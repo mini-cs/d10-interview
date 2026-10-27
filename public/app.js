@@ -1,6 +1,6 @@
 import {
   TOTAL_QUESTIONS, MAX_FOLLOW_UPS, parseCsv, pickIntro, checkGenerated, fillMissing,
-  clamp, averageUnderstanding, panelAverage, answerTotal, REWRITE_BELOW, CRITERIA,
+  clamp, averageUnderstanding, panelAverage, answerTotal, compare, REWRITE_BELOW, CRITERIA,
 } from './coach.js';
 
 const MIN_EXPERIENCE = 30;
@@ -23,6 +23,7 @@ function newState() {
     finished: false,
     // [0] 위원 평가, [1..5] 답변별 평가. 각 칸은 null(아직) · { data } · { error }
     evaluation: Array(TOTAL_QUESTIONS + 1).fill(null),
+    retries: {},         // 질문 번호(1~5) → { answer, data } 마지막 재도전
   };
 }
 
@@ -191,10 +192,9 @@ async function sendAnswer(event) {
     } else if (res.follow_up === true) {
       nextQuestion(); // 꼬리 질문을 이미 했으므로 AI가 더 물어도 넘어간다
     } else {
-      if (reply) {
-        q.turns.push({ role: 'interviewer', text: reply });
-        bubble('interviewer', reply);
-      }
+      // 반응은 turns 에 넣지 않는다 (평가에는 질문 · 꼬리 질문 · 답만 보낸다)
+      q.reaction = reply;
+      if (reply) bubble('interviewer', reply);
       nextQuestion();
     }
   } catch (err) {
@@ -218,6 +218,10 @@ function restart() {
   setWaiting(null);
   $('eval-waiting').hidden = true;
   $('eval-results').replaceChildren();
+  $('retry-answer').value = '';
+  $('retry-notice').textContent = '';
+  $('retry-waiting').hidden = true;
+  renderRetry();
   $('answer-form').hidden = false;
   $('eval-screen').hidden = true;
   $('interview-screen').hidden = true;
@@ -241,7 +245,8 @@ function evalRequest(i) {
     return ['eval_panel', { track, company, experience, turns: state.questions.flatMap((q) => q.turns) }];
   }
   const q = state.questions[i - 1];
-  return ['eval_answer', { track, company, experience, question: q.question, point: q.point, turns: q.turns }];
+  // 질문은 vars 로 가므로 contents 에는 본 답 + 꼬리 질문과 답만
+  return ['eval_answer', { track, company, experience, question: q.question, point: q.point, turns: q.turns.slice(1) }];
 }
 
 // 무료 한도 때문에 한 번에 하나씩 차례로 부른다
@@ -359,9 +364,87 @@ function renderEvaluation() {
   results.append(renderPanel(state.evaluation[0]));
   results.append(el('h3', '답변별 평가'));
   for (let i = 1; i < EVAL_COUNT; i++) results.append(renderAnswer(i));
+  renderRetry();
+}
+
+// ---- 재도전 ----
+
+function renderRetry() {
+  const done = [];
+  for (let i = 1; i < EVAL_COUNT; i++) if (state.evaluation[i]?.data) done.push(i);
+  $('retry-box').hidden = !done.length;
+  if (!done.length) return;
+  done.sort((a, b) => answerTotal(state.evaluation[a].data) - answerTotal(state.evaluation[b].data));
+
+  const pick = $('retry-pick');
+  const selected = pick.value;
+  pick.replaceChildren(...done.map((i) => {
+    const option = el('option', `질문 ${i} · ${answerTotal(state.evaluation[i].data)}/20 — ${state.questions[i - 1].question}`);
+    option.value = String(i);
+    return option;
+  }));
+  if (done.includes(Number(selected))) pick.value = selected;
+  renderRetryDetail();
+}
+
+function renderRetryDetail() {
+  const i = Number($('retry-pick').value);
+  const before = state.evaluation[i].data;
+  $('retry-info').textContent = `지난 점수 ${answerTotal(before)} / 20 · 약한 점: ${before.weak}`;
+
+  const box = $('retry-result');
+  box.replaceChildren();
+  const retry = state.retries[i];
+  if (!retry) return;
+  const c = compare(before, retry.data);
+  box.append(el('p', `다시 채점 ${c.after} / 20 (${c.diffText})`, `big ${c.diff > 0 ? 'up' : c.diff < 0 ? 'down' : ''}`));
+  const table = el('table');
+  const head = table.createTHead().insertRow();
+  for (const h of ['기준', '전', '후']) head.append(el('th', h));
+  const body = table.createTBody();
+  for (const r of c.rows) {
+    const row = body.insertRow();
+    row.append(el('td', r.label), el('td', `${r.before}`, 'num'), el('td', `${r.after}`, 'num'));
+  }
+  const total = body.insertRow();
+  total.append(el('th', '합계'), el('td', `${c.before}`, 'num'), el('td', `${c.after}`, 'num'));
+  box.append(table, el('p', `이번 약한 점: ${retry.data.weak}`));
+}
+
+async function submitRetry() {
+  if (state.busy) return;
+  const i = Number($('retry-pick').value);
+  const answer = $('retry-answer').value.trim();
+  const notice = $('retry-notice');
+  if (!answer) { notice.textContent = '다시 쓴 답을 적어 주세요.'; return; }
+  if (answer.length > MAX_ANSWER) { notice.textContent = `답변은 ${MAX_ANSWER}자 이내로 적어 주세요. (지금 ${answer.length}자)`; return; }
+  notice.textContent = '';
+
+  const q = state.questions[i - 1];
+  const session = state.session;
+  state.busy = true;
+  $('retry-waiting').hidden = false;
+  $('retry-waiting').textContent = '다시 채점하고 있어요…';
+  try {
+    const { track, company, experience } = state.profile;
+    const data = await ask('retry', { track, company, experience, question: q.question, point: q.point, answer });
+    if (session !== state.session) return;
+    state.retries[i] = { answer, data };
+    renderRetryDetail();
+  } catch (err) {
+    if (session === state.session) notice.textContent = err.message;
+  } finally {
+    if (session === state.session) { state.busy = false; $('retry-waiting').hidden = true; }
+  }
 }
 
 $('start-form').addEventListener('submit', startInterview);
 $('answer-form').addEventListener('submit', sendAnswer);
 $('restart').addEventListener('click', restart);
 $('eval-start').addEventListener('click', () => runEvaluation([...Array(EVAL_COUNT).keys()]));
+$('retry-pick').addEventListener('change', () => {
+  $('retry-answer').value = state.retries[$('retry-pick').value]?.answer ?? '';
+  $('retry-notice').textContent = '';
+  renderRetryDetail();
+});
+$('retry-submit').addEventListener('click', submitRetry);
